@@ -1,0 +1,56 @@
+﻿apiVersion: v1
+kind: Secret
+metadata:
+  name: keda-kafka-secrets
+  namespace: kedapoc
+data:
+  sasl: "cGxhaW50ZXh0"
+  username: "MkdCSkpPN1QyRk5JU0FCRQ=="
+  password: "MkxSQUh6Z0szWUROcHVEcE9tV0xBWmM5Uisxa0VwR0s2WDlLQ0kvN29LbXhqVGdzaC9GS0ttS0NsTnNuRDl6Mw=="
+  tls: "ZW5hYmxl"
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-trigger-auth-kafka-credential
+  namespace: kedapoc
+spec:
+  secretTargetRef:
+  - parameter: sasl
+    name: keda-kafka-secrets
+    key: sasl
+  - parameter: username
+    name: keda-kafka-secrets
+    key: username
+  - parameter: password
+    name: keda-kafka-secrets
+    key: password
+  - parameter: tls
+    name: keda-kafka-secrets
+    key: tls
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: kafka-scaledobject
+  namespace: kedapoc
+  labels:
+    deploymentName: consumer
+spec:
+  scaleTargetRef:
+    name: consumer
+    kind: deployment
+  pollingInterval: 30
+  cooldownPeriod: 60
+  maxReplicaCount: 50
+  minReplicaCount: 1
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: pkc-epwny.eastus.azure.confluent.cloud:9092
+        consumerGroup: kedapoc
+        topic: kedapoc
+        lagThreshold: "2"
+        offsetResetPolicy: latest
+      authenticationRef:
+        name: keda-trigger-auth-kafka-credential
